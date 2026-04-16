@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Kanban Supermercado — L1 Trenes</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+:root {
+  --bg:#0f0f0e;--bg2:#181817;--bg3:#222220;--bg4:#2c2c2a;
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);
+  --text:#f0ede6;--text2:#9e9c95;--text3:#5c5b56;
+  --blue:#3b82f6;--blue-bg:rgba(59,130,246,0.12);--blue-border:rgba(59,130,246,0.3);
+  --purple:#a78bfa;--purple-bg:rgba(167,139,250,0.12);--purple-border:rgba(167,139,250,0.3);
+  --amber:#f59e0b;--amber-bg:rgba(245,158,11,0.12);--amber-border:rgba(245,158,11,0.3);
+  --green:#34d399;--green-bg:rgba(52,211,153,0.12);--green-border:rgba(52,211,153,0.3);
+  --red:#f87171;--red-bg:rgba(248,113,113,0.12);--red-border:rgba(248,113,113,0.3);
+  --radius:12px;--radius-sm:8px;
+  --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;overflow-x:hidden;}
+.app{display:flex;flex-direction:column;height:100vh;max-width:480px;margin:0 auto;}
+.topbar{padding:14px 20px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--bg);}
+.topbar-left{display:flex;align-items:center;gap:10px;}
+.topbar-title{font-size:16px;font-weight:600;letter-spacing:-.3px;}
+.topbar-sub{font-size:12px;color:var(--text3);margin-top:1px;}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);transition:background .3s;}
+.sync-dot.ok{background:var(--green);}
+.sync-dot.syncing{background:var(--amber);animation:pulse .8s ease-in-out infinite;}
+.sync-dot.error{background:var(--red);}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+.role-pill{font-size:11px;font-weight:500;padding:4px 10px;border-radius:20px;cursor:pointer;transition:all .2s;}
+.role-pill.operario{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border);}
+.role-pill.encargada{background:var(--purple-bg);color:var(--purple);border:1px solid var(--purple-border);}
+.content{flex:1;overflow-y:auto;padding:16px 16px 100px;}
+.bottomnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--bg2);border-top:1px solid var(--border);display:flex;padding:8px 12px 16px;gap:4px;z-index:100;}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;border-radius:var(--radius-sm);border:none;background:none;color:var(--text3);cursor:pointer;font-family:var(--font);transition:all .15s;font-size:11px;position:relative;}
+.nav-btn.active{color:var(--text);background:var(--bg3);}
+.nav-btn svg{width:20px;height:20px;}
+.nav-badge{position:absolute;top:4px;right:calc(50% - 18px);background:var(--red);color:#fff;font-size:9px;font-weight:600;width:15px;height:15px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;}
+.card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;}
+.card-tipo{font-size:22px;font-weight:600;line-height:1;}
+.card-util{font-size:12px;color:var(--text2);margin-top:2px;}
+.status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.status-dot.libre{background:var(--green);}
+.status-dot.pedido{background:var(--amber);}
+.status-dot.entregado{background:var(--blue);}
+.pill{font-size:10px;font-weight:500;padding:3px 8px;border-radius:20px;}
+.pill.libre{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);}
+.pill.pedido{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border);}
+.pill.entregado{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border);}
+.field-row{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.field-row:last-child{border-bottom:none;}
+.field-label{color:var(--text3);font-size:12px;}
+.field-val{font-weight:500;text-align:right;}
+.field-val.mono{font-family:var(--mono);font-size:11px;color:var(--text2);}
+.tipo-c210 .card-tipo{color:var(--blue);}
+.tipo-c120 .card-tipo{color:var(--green);}
+.tipo-c130 .card-tipo{color:var(--amber);}
+.tipo-c310 .card-tipo{color:var(--red);}
+.scan-zone{background:var(--bg2);border:1.5px dashed var(--border2);border-radius:var(--radius);padding:32px 20px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:16px;}
+.scan-zone:hover,.scan-zone:active{background:var(--bg3);border-color:var(--blue);}
+.scan-icon{width:56px;height:56px;margin:0 auto 12px;display:grid;grid-template-columns:1fr 8px 1fr;grid-template-rows:1fr 8px 1fr;gap:3px;}
+.scan-icon-cell{background:var(--text2);border-radius:2px;}
+.scan-icon-center{background:transparent;}
+.scan-zone-label{font-size:14px;color:var(--text2);}
+.scan-zone-sub{font-size:12px;color:var(--text3);margin-top:4px;}
+.scan-result{border-radius:var(--radius);overflow:hidden;margin-bottom:12px;animation:slideUp .25s ease;}
+@keyframes slideUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.btn{width:100%;padding:14px;border-radius:var(--radius-sm);border:none;font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;transition:all .15s;letter-spacing:-.2px;}
+.btn:active{transform:scale(.98);}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+.btn-primary{background:var(--blue);color:#fff;}
+.btn-primary:hover:not(:disabled){background:#60a5fa;}
+.btn-success{background:var(--green);color:#000;}
+.btn-success:hover:not(:disabled){background:#6ee7b7;}
+.btn-outline{background:transparent;color:var(--text2);border:1px solid var(--border2);}
+.btn-outline:hover{background:var(--bg3);}
+.alert-card{background:var(--bg2);border-radius:var(--radius);border:1px solid var(--border);margin-bottom:10px;overflow:hidden;}
+.alert-card-hdr{padding:12px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);}
+.alert-tipo{font-size:18px;font-weight:600;}
+.alert-meta{flex:1;}
+.alert-ref{font-family:var(--mono);font-size:11px;color:var(--text3);}
+.alert-desc{font-size:13px;font-weight:500;}
+.alert-card-body{padding:10px 14px;display:flex;flex-direction:column;gap:7px;}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;text-align:center;}
+.stat-n{font-size:24px;font-weight:600;}
+.stat-l{font-size:11px;color:var(--text3);margin-top:2px;}
+.stat-n.green{color:var(--green);}
+.stat-n.amber{color:var(--amber);}
+.stat-n.blue{color:var(--blue);}
+.section-title{font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin:20px 0 10px;}
+.empty-state{text-align:center;padding:32px 20px;color:var(--text3);font-size:13px;}
+.empty-state-icon{font-size:32px;margin-bottom:8px;opacity:.4;}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-80px);background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:12px 18px;font-size:13px;z-index:999;transition:transform .3s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;max-width:90vw;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.toast.success{border-color:var(--green-border);color:var(--green);}
+.toast.info{border-color:var(--purple-border);color:var(--purple);}
+.toast.error{border-color:var(--red-border);color:var(--red);}
+.hueco-list{display:flex;flex-direction:column;gap:6px;}
+.hueco-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:all .15s;}
+.hueco-item:hover{background:var(--bg3);border-color:var(--border2);}
+.hueco-tipo{font-size:15px;font-weight:600;width:44px;}
+.hueco-info{flex:1;}
+.hueco-ref{font-family:var(--mono);font-size:11px;color:var(--text3);}
+.hueco-desc{font-size:13px;}
+.hueco-state{display:flex;align-items:center;gap:5px;}
+.hist-item{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);align-items:center;}
+.hist-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.hist-text{font-size:12px;color:var(--text2);flex:1;}
+.hist-time{font-size:11px;color:var(--text3);}
+.filter-tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+.filter-tab{font-size:12px;padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:none;color:var(--text3);cursor:pointer;font-family:var(--font);transition:all .15s;}
+.filter-tab.active{background:var(--bg3);color:var(--text);border-color:var(--border2);}
+.sync-banner{background:var(--amber-bg);border-bottom:1px solid var(--amber-border);padding:6px 20px;font-size:11px;color:var(--amber);text-align:center;display:none;}
+.sync-banner.show{display:block;}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px;}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="sync-dot" id="sync-dot" title="Estado sincronización"></div>
+      <div>
+        <div class="topbar-title">Kanban L1 Trenes</div>
+        <div class="topbar-sub" id="topbar-sub">Supermercado borde de línea</div>
+      </div>
+    </div>
+    <div class="role-pill operario" id="role-toggle" onclick="toggleRole()">Operario</div>
+  </div>
+  <div class="sync-banner" id="sync-banner">Sincronizando con otros dispositivos...</div>
+  <div class="content" id="content"></div>
+  <div class="bottomnav" id="bottomnav"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════════
+   DATOS MAESTROS — ÚTILES Y MATERIALES
+═══════════════════════════════════════════════ */
+const UTILS = [
+  {util:'BANDSALA',coches:[{tipo:'C120',ref:'120-BANDSALA',desc:'Perfil estanqueidad lateral dcho.'}]},
+  {util:'C51',coches:[{tipo:'C130',ref:'130-C51',desc:'Mecanismo'}]},
+  {util:'C52',coches:[{tipo:'C130',ref:'130-C52',desc:'Conjunt testero lado dcho.'}]},
+  {util:'C54.1',coches:[{tipo:'C120',ref:'120-C54.1',desc:'Testero lado izq.'},{tipo:'C130',ref:'130-C54.1',desc:'Testero lado dcho.'},{tipo:'C210',ref:'210-C54.1',desc:'Testero lado dcho.'},{tipo:'C310',ref:'310-C54.1',desc:'Testero lado dcho.'}]},
+  {util:'C54.2',coches:[{tipo:'C130',ref:'130-C54.2',desc:'Testero lado izq.'},{tipo:'C210',ref:'210-C54.2',desc:'Testero lado izq.'},{tipo:'C310',ref:'310-C54.2',desc:'Testero lado izq.'}]},
+  {util:'P56',coches:[{tipo:'C120',ref:'120-P56',desc:'Maniquí paq L1 laterales'},{tipo:'C130',ref:'130-P56',desc:'Maniquí paq L1 laterales'},{tipo:'C310',ref:'310-P56',desc:'Maniquí paq L1 laterales'}]},
+  {util:'P70',coches:[{tipo:'C210',ref:'210-P70',desc:'Conjunto trampilla soldada'}]},
+  {util:'U50',coches:[{tipo:'C120',ref:'120-U50',desc:'Mecanismo'},{tipo:'C130',ref:'130-U50',desc:'Mecanismo'},{tipo:'C210',ref:'210-U50',desc:'Mecanismo'},{tipo:'C310',ref:'310-U50',desc:'Mecanismo'}]},
+  {util:'U51',coches:[{tipo:'C120',ref:'120-U51',desc:'Hoja derecha'},{tipo:'C130',ref:'130-U51',desc:'Hoja derecha'},{tipo:'C210',ref:'210-U51',desc:'Hoja derecha'},{tipo:'C310',ref:'310-U51',desc:'Hoja derecha'}]},
+  {util:'U52',coches:[{tipo:'C130',ref:'130-U52',desc:'Hoja der./izq.'}]},
+  {util:'U53',coches:[{tipo:'C120',ref:'120-U53',desc:'Estructura tabique equipada'},{tipo:'C130',ref:'130-U53',desc:'Estructura tabique equipada'}]},
+  {util:'U54',coches:[{tipo:'C120',ref:'120-U54',desc:'Armarios 191-197 ensayados'},{tipo:'C130',ref:'130-U54',desc:'Armarios 191-197 ensayados'}]},
+];
+const INTERVAL={C210:'6,2 días',C120:'20,0 días',C130:'19,6 días',C310:'16,7 días'};
+const COLOR={C210:'var(--blue)',C120:'var(--green)',C130:'var(--amber)',C310:'var(--red)'};
+const TIPO_CLS={C210:'tipo-c210',C120:'tipo-c120',C130:'tipo-c130',C310:'tipo-c310'};
+
+/* ═══════════════════════════════════════════════
+   BACKEND — PERSISTENT STORAGE COMPARTIDO
+   Estado compartido entre todos los dispositivos.
+   Sincronización automática cada 10 segundos.
+═══════════════════════════════════════════════ */
+const STORAGE_KEY = 'kanban_l1_trenes_v1';
+const NOTIF_KEY   = 'kanban_notificaciones_v1';
+
+let db = null;          // estado local en memoria
+let isSaving = false;   // lock para evitar writes concurrentes
+let lastSyncTs = 0;     // timestamp último sync
+
+function emptyDB() {
+  const huecos = {};
+  UTILS.forEach(u => {
+    u.coches.forEach(c => {
+      ['A','B'].forEach(pos => {
+        const id = `${u.util}-${c.tipo}-${pos}`;
+        huecos[id] = { id, util:u.util, tipo:c.tipo, ref:c.ref, desc:c.desc, pos, estado:'libre', ts_pedido:null, ts_entrega:null };
+      });
+    });
+  });
+  return { huecos, historial: [], version: 1 };
+}
+
+async function loadFromStorage() {
+  setSyncState('syncing');
+  try {
+    const result = await window.storage.get(STORAGE_KEY, true); // shared=true
+    if (result && result.value) {
+      db = JSON.parse(result.value);
+    } else {
+      db = emptyDB();
+      await persistDB();
+    }
+    lastSyncTs = Date.now();
+    setSyncState('ok');
+  } catch(e) {
+    // fallback a localStorage si storage no disponible
+    const local = localStorage.getItem(STORAGE_KEY);
+    db = local ? JSON.parse(local) : emptyDB();
+    setSyncState('error');
+  }
+  return db;
+}
+
+async function persistDB() {
+  if (isSaving) return;
+  isSaving = true;
+  setSyncState('syncing');
+  showSyncBanner(true);
+  try {
+    await window.storage.set(STORAGE_KEY, JSON.stringify(db), true); // shared=true
+    lastSyncTs = Date.now();
+    setSyncState('ok');
+  } catch(e) {
+    // fallback localStorage
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+    setSyncState('error');
+  } finally {
+    isSaving = false;
+    showSyncBanner(false);
+  }
+}
+
+async function syncFromStorage() {
+  // Polling para ver si otro dispositivo cambió el estado
+  try {
+    const result = await window.storage.get(STORAGE_KEY, true);
+    if (!result || !result.value) return;
+    const remote = JSON.parse(result.value);
+    // Comparar historial: si remoto tiene más entradas, actualizar
+    if (remote.historial.length > db.historial.length) {
+      const prevPedidos = Object.values(db.huecos).filter(h=>h.estado==='pedido').length;
+      db = remote;
+      const newPedidos = Object.values(db.huecos).filter(h=>h.estado==='pedido').length;
+      if (role === 'encargada' && newPedidos > prevPedidos) {
+        showToast('Nuevo pedido recibido del operario', 'info');
+        requestAnimationFrame(() => render());
+      } else if (role === 'encargada' && newPedidos < prevPedidos) {
+        showToast('Ciclo cerrado — hueco repuesto', 'success');
+        requestAnimationFrame(() => render());
+      } else {
+        requestAnimationFrame(() => render());
+      }
+      setSyncState('ok');
+    }
+  } catch(e) { /* silencioso */ }
+}
+
+function setSyncState(state) {
+  const dot = document.getElementById('sync-dot');
+  if (!dot) return;
+  dot.className = 'sync-dot ' + state;
+  dot.title = state === 'ok' ? 'Sincronizado' : state === 'syncing' ? 'Sincronizando...' : 'Sin conexión (modo local)';
+}
+
+function showSyncBanner(show) {
+  const b = document.getElementById('sync-banner');
+  if (b) b.className = 'sync-banner' + (show ? ' show' : '');
+}
+
+function addHistorial(msg, tipo) {
+  db.historial.unshift({msg, tipo, ts: Date.now()});
+  if (db.historial.length > 100) db.historial = db.historial.slice(0, 100);
+}
+
+function timeAgo(ts) {
+  if (!ts) return '';
+  const d = Math.floor((Date.now()-ts)/1000);
+  if (d < 60) return 'hace un momento';
+  if (d < 3600) return `hace ${Math.floor(d/60)} min`;
+  if (d < 86400) return `hace ${Math.floor(d/3600)} h`;
+  return `hace ${Math.floor(d/86400)} días`;
+}
+
+/* ═══════════════════════════════════════════════
+   APP STATE
+═══════════════════════════════════════════════ */
+let role = 'operario';
+let currentTab = 'scan';
+let scanTarget = null;
+let actionInProgress = false;
+
+function toggleRole() {
+  role = role === 'operario' ? 'encargada' : 'operario';
+  currentTab = role === 'operario' ? 'scan' : 'alertas';
+  document.getElementById('role-toggle').className = `role-pill ${role}`;
+  document.getElementById('role-toggle').textContent = role === 'operario' ? 'Operario' : 'Encargada';
+  scanTarget = null;
+  render();
+}
+
+function showToast(msg, tipo='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${tipo} show`;
+  setTimeout(()=>{ t.className = `toast ${tipo}`; }, 3000);
+}
+
+function render() {
+  renderNav();
+  if (role === 'operario') renderOperario();
+  else renderEncargada();
+}
+
+function renderNav() {
+  const nav = document.getElementById('bottomnav');
+  const pendientes = Object.values(db.huecos).filter(h=>h.estado==='pedido').length;
+  const badge = pendientes > 0 ? `<div class="nav-badge">${pendientes}</div>` : '';
+  if (role === 'operario') {
+    nav.innerHTML = `
+      <button class="nav-btn ${currentTab==='scan'?'active':''}" onclick="setTab('scan')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Escanear
+      </button>
+      <button class="nav-btn ${currentTab==='huecos'?'active':''}" onclick="setTab('huecos')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+        Supermercado
+      </button>
+      <button class="nav-btn ${currentTab==='historial'?'active':''}" onclick="setTab('historial')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+        Historial
+      </button>`;
+  } else {
+    nav.innerHTML = `
+      <button class="nav-btn ${currentTab==='alertas'?'active':''}" onclick="setTab('alertas')">
+        ${badge}
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        Alertas
+      </button>
+      <button class="nav-btn ${currentTab==='estado'?'active':''}" onclick="setTab('estado')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Estado
+      </button>
+      <button class="nav-btn ${currentTab==='historial'?'active':''}" onclick="setTab('historial')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+        Historial
+      </button>`;
+  }
+}
+
+function setTab(tab) { currentTab = tab; render(); }
+
+/* ═══════════════════════ OPERARIO ═══════════════════════ */
+function renderOperario() {
+  const c = document.getElementById('content');
+  if (currentTab === 'scan') c.innerHTML = renderScanView();
+  else if (currentTab === 'huecos') c.innerHTML = renderHuecosView();
+  else c.innerHTML = renderHistorialView();
+}
+
+function renderScanView() {
+  if (scanTarget) return renderScannedCard(scanTarget);
+  const porColocar = Object.values(db.huecos).filter(h=>h.estado==='entregado'&&h.pos==='B');
+  return `
+    <div class="scan-zone" onclick="openScanSelector()">
+      <div class="scan-icon">
+        <div class="scan-icon-cell"></div><div class="scan-icon-cell"></div><div class="scan-icon-cell"></div>
+        <div class="scan-icon-cell"></div><div class="scan-icon-center"></div><div class="scan-icon-cell"></div>
+        <div class="scan-icon-cell"></div><div class="scan-icon-cell"></div><div class="scan-icon-cell"></div>
+      </div>
+      <div class="scan-zone-label">Escanear QR del hueco</div>
+      <div class="scan-zone-sub">Toca para simular escaneo</div>
+    </div>
+    ${porColocar.length > 0 ? `
+      <div class="section-title">Material en recepción — pendiente de colocar (${porColocar.length})</div>
+      ${porColocar.map(h=>`
+        <div class="hueco-item" onclick="setScanTarget('${h.id}')">
+          <div class="hueco-tipo" style="color:${COLOR[h.tipo]}">${h.tipo}</div>
+          <div class="hueco-info">
+            <div class="hueco-ref">${h.ref}</div>
+            <div class="hueco-desc">${h.desc} · ${h.util}</div>
+          </div>
+          <span style="font-size:11px;font-family:var(--mono);color:var(--blue);">→ ${h.id}</span>
+        </div>`).join('')}
+    ` : `<div class="empty-state"><div class="empty-state-icon">✓</div>Sin material pendiente de colocar</div>`}`;
+}
+
+function openScanSelector() {
+  const libres = Object.values(db.huecos).filter(h=>h.pos==='A'&&h.estado==='libre');
+  if (libres.length === 0) {
+    showToast('No hay huecos vacíos disponibles', 'error');
+    return;
+  }
+  document.getElementById('content').innerHTML = `
+    <div style="margin-bottom:14px;">
+      <div style="font-size:14px;font-weight:600;margin-bottom:4px;">Selecciona el hueco escaneado</div>
+      <div style="font-size:12px;color:var(--text3);">Simula escanear el QR del hueco que acabas de vaciar</div>
+    </div>
+    <div class="hueco-list">
+      ${libres.map(h=>`
+        <div class="hueco-item" onclick="setScanTarget('${h.id}')">
+          <div class="hueco-tipo" style="color:${COLOR[h.tipo]}">${h.tipo}</div>
+          <div class="hueco-info">
+            <div class="hueco-ref">${h.ref}</div>
+            <div class="hueco-desc">${h.desc} · ${h.util}</div>
+          </div>
+          <div class="hueco-state"><div class="status-dot libre"></div></div>
+        </div>`).join('')}
+    </div>
+    <div style="margin-top:12px;"><button class="btn btn-outline" onclick="cancelScan()">Cancelar</button></div>`;
+}
+
+function setScanTarget(id) { scanTarget = id; render(); }
+function cancelScan() { scanTarget = null; render(); }
+
+function renderScannedCard(id) {
+  const h = db.huecos[id];
+  if (!h) { scanTarget = null; render(); return ''; }
+  const isConsumo = h.pos === 'A' && h.estado === 'libre';
+  const isReponer = h.estado === 'entregado';
+  const btnConsumo = isConsumo
+    ? `<button class="btn btn-primary" id="btn-accion" onclick="accionConsumo('${id}')">Confirmar consumo — enviar pedido</button>`
+    : '';
+  const btnReponer = isReponer
+    ? `<button class="btn btn-success" id="btn-accion" onclick="accionReposicion('${id}')">Confirmar reposición en hueco B</button>`
+    : '';
+  const btnNada = (!isConsumo && !isReponer)
+    ? `<div style="font-size:12px;color:var(--text3);text-align:center;padding:6px 0;">Este hueco ya tiene un pedido en curso · estado: ${h.estado}</div>`
+    : '';
+  return `
+    <div class="scan-result">
+      <div class="card ${TIPO_CLS[h.tipo]}" style="border-color:${COLOR[h.tipo]}40;margin-bottom:0;border-radius:var(--radius) var(--radius) 0 0;">
+        <div class="card-header">
+          <div><div class="card-tipo">${h.tipo}</div><div class="card-util">${h.util}</div></div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+            <div style="font-size:22px;font-weight:600;color:${COLOR[h.tipo]}">${h.pos}</div>
+            <span class="pill ${h.estado}">${h.estado}</span>
+          </div>
+        </div>
+        <div class="field-row"><span class="field-label">Código</span><span class="field-val mono">${h.ref}</span></div>
+        <div class="field-row"><span class="field-label">Material</span><span class="field-val" style="font-size:12px;max-width:60%;">${h.desc}</span></div>
+        <div class="field-row"><span class="field-label">Ubicación</span><span class="field-val mono">${h.id}</span></div>
+        <div class="field-row"><span class="field-label">Intervalo medio</span><span class="field-val">${INTERVAL[h.tipo]}</span></div>
+        <div class="field-row" style="border:none;"><span class="field-label">LT reposición</span><span class="field-val">5 ± 1 días</span></div>
+      </div>
+      <div style="padding:12px;background:var(--bg3);border-radius:0 0 var(--radius) var(--radius);border:1px solid ${COLOR[h.tipo]}40;border-top:none;">
+        ${btnConsumo}${btnReponer}${btnNada}
+        <button class="btn btn-outline" style="margin-top:8px;" onclick="cancelScan()">Volver</button>
+      </div>
+    </div>`;
+}
+
+async function accionConsumo(id) {
+  if (actionInProgress) return;
+  actionInProgress = true;
+  const btn = document.getElementById('btn-accion');
+  if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+  const h = db.huecos[id];
+  h.estado = 'pedido';
+  h.ts_pedido = Date.now();
+  addHistorial(`Consumo: ${h.ref} (${h.util}) — pedido enviado a encargada`, 'consumo');
+  await persistDB();
+  scanTarget = null;
+  actionInProgress = false;
+  showToast('Pedido enviado a la encargada');
+  render();
+}
+
+async function accionReposicion(id) {
+  if (actionInProgress) return;
+  actionInProgress = true;
+  const btn = document.getElementById('btn-accion');
+  if (btn) { btn.disabled = true; btn.textContent = 'Confirmando...'; }
+  const h = db.huecos[id];
+  h.estado = 'libre';
+  h.ts_entrega = null;
+  h.ts_pedido = null;
+  addHistorial(`Repuesto: ${h.ref} (${h.util}) — ciclo cerrado, hueco B listo`, 'reposicion');
+  await persistDB();
+  scanTarget = null;
+  actionInProgress = false;
+  showToast('Ciclo cerrado — encargada notificada', 'success');
+  render();
+}
+
+function renderHuecosView() {
+  const huecos = Object.values(db.huecos);
+  const libres = huecos.filter(h=>h.estado==='libre').length;
+  const pedidos = huecos.filter(h=>h.estado==='pedido').length;
+  const entregados = huecos.filter(h=>h.estado==='entregado').length;
+  let html = `
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-n green">${libres}</div><div class="stat-l">Libres</div></div>
+      <div class="stat-card"><div class="stat-n amber">${pedidos}</div><div class="stat-l">En pedido</div></div>
+      <div class="stat-card"><div class="stat-n blue">${entregados}</div><div class="stat-l">Por colocar</div></div>
+    </div>
+    <div class="filter-tabs">
+      <button class="filter-tab active" onclick="filterHuecos('todos',this)">Todos</button>
+      <button class="filter-tab" onclick="filterHuecos('pedido',this)">En pedido</button>
+      <button class="filter-tab" onclick="filterHuecos('entregado',this)">Por colocar</button>
+    </div>
+    <div class="hueco-list" id="hueco-list">`;
+  UTILS.forEach(u => {
+    u.coches.forEach(c => {
+      ['A','B'].forEach(pos => {
+        const id = `${u.util}-${c.tipo}-${pos}`;
+        const h = db.huecos[id];
+        if (!h) return;
+        html += `<div class="hueco-item" data-estado="${h.estado}" onclick="setScanTarget('${id}');setTab('scan');">
+          <div class="hueco-tipo" style="color:${COLOR[h.tipo]}">${h.tipo}</div>
+          <div class="hueco-info">
+            <div class="hueco-ref">${h.ref} · pos. ${pos}</div>
+            <div class="hueco-desc">${h.util} — ${h.desc}</div>
+          </div>
+          <div class="hueco-state">
+            <div class="status-dot ${h.estado}"></div>
+            <span class="pill ${h.estado}" style="font-size:10px;">${h.estado}</span>
+          </div>
+        </div>`;
+      });
+    });
+  });
+  return html + `</div>`;
+}
+
+function filterHuecos(estado, btn) {
+  document.querySelectorAll('.filter-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('#hueco-list .hueco-item[data-estado]').forEach(el => {
+    el.style.display = (estado==='todos'||el.dataset.estado===estado)?'':'none';
+  });
+}
+
+/* ═══════════════════════ ENCARGADA ═══════════════════════ */
+function renderEncargada() {
+  const c = document.getElementById('content');
+  if (currentTab === 'alertas') c.innerHTML = renderAlertasView();
+  else if (currentTab === 'estado') c.innerHTML = renderEstadoView();
+  else c.innerHTML = renderHistorialView();
+}
+
+function renderAlertasView() {
+  const pedidos = Object.values(db.huecos).filter(h=>h.estado==='pedido');
+  const entregados = Object.values(db.huecos).filter(h=>h.estado==='entregado');
+  let html = '';
+  if (pedidos.length === 0 && entregados.length === 0) {
+    html += `<div class="empty-state"><div class="empty-state-icon">✓</div>Todo en orden — sin alertas pendientes</div>`;
+  }
+  if (pedidos.length > 0) {
+    html += `<div class="section-title">Pendiente de pedir a almacén (${pedidos.length})</div>`;
+    pedidos.forEach(h => {
+      html += `
+        <div class="alert-card">
+          <div class="alert-card-hdr">
+            <div class="alert-tipo" style="color:${COLOR[h.tipo]}">${h.tipo}</div>
+            <div class="alert-meta">
+              <div class="alert-desc">${h.desc}</div>
+              <div class="alert-ref">${h.ref} · ${h.util}</div>
+            </div>
+            <span class="pill pedido">pedido</span>
+          </div>
+          <div class="alert-card-body">
+            <div style="display:flex;justify-content:space-between;font-size:12px;">
+              <span style="color:var(--text3);">Ubicación hueco</span>
+              <span style="font-family:var(--mono);color:var(--text2);">${h.id}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;">
+              <span style="color:var(--text3);">Solicitado</span>
+              <span style="color:var(--text2);">${timeAgo(h.ts_pedido)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;">
+              <span style="color:var(--text3);">LT reposición</span>
+              <span style="color:var(--text2);">5 ± 1 días</span>
+            </div>
+            <button class="btn btn-primary" onclick="confirmarPedidoAlmacen('${h.id}')">Pedido realizado a almacén</button>
+          </div>
+        </div>`;
+    });
+  }
+  if (entregados.length > 0) {
+    html += `<div class="section-title">En recepción — operario lo colocará (${entregados.length})</div>`;
+    entregados.forEach(h => {
+      html += `
+        <div class="alert-card" style="border-color:var(--blue-border);">
+          <div class="alert-card-hdr">
+            <div class="alert-tipo" style="color:${COLOR[h.tipo]}">${h.tipo}</div>
+            <div class="alert-meta">
+              <div class="alert-desc">${h.desc}</div>
+              <div class="alert-ref">${h.ref} · ${h.util}</div>
+            </div>
+            <span class="pill entregado">en recepción</span>
+          </div>
+          <div class="alert-card-body">
+            <div style="display:flex;justify-content:space-between;font-size:12px;">
+              <span style="color:var(--text3);">Hueco destino</span>
+              <span style="font-family:var(--mono);color:var(--text2);">${h.id}</span>
+            </div>
+            <div style="font-size:12px;color:var(--text3);">El operario lo colocará cuando lo vea en recepción y cerrará el ciclo.</div>
+          </div>
+        </div>`;
+    });
+  }
+  return html;
+}
+
+async function confirmarPedidoAlmacen(id) {
+  if (actionInProgress) return;
+  actionInProgress = true;
+  const h = db.huecos[id];
+  h.estado = 'entregado';
+  h.ts_entrega = Date.now();
+  addHistorial(`Pedido a almacén confirmado: ${h.ref} (${h.util}) — esperando entrega en recepción`, 'pedido');
+  await persistDB();
+  actionInProgress = false;
+  showToast('Pedido registrado — almacén lo traerá en recepción', 'info');
+  render();
+}
+
+function renderEstadoView() {
+  const huecos = Object.values(db.huecos);
+  const total = huecos.length;
+  const libres = huecos.filter(h=>h.estado==='libre').length;
+  const pedidos = huecos.filter(h=>h.estado==='pedido').length;
+  const entregados = huecos.filter(h=>h.estado==='entregado').length;
+  const pct = Math.round(libres/total*100);
+  let html = `
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-n green">${libres}</div><div class="stat-l">Libres</div></div>
+      <div class="stat-card"><div class="stat-n amber">${pedidos}</div><div class="stat-l">En pedido</div></div>
+      <div class="stat-card"><div class="stat-n blue">${entregados}</div><div class="stat-l">En recepción</div></div>
+    </div>
+    <div class="card" style="margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span style="font-size:13px;color:var(--text2);">Disponibilidad supermercado</span>
+        <span style="font-size:20px;font-weight:600;color:${pct>80?'var(--green)':pct>50?'var(--amber)':'var(--red)'};">${pct}%</span>
+      </div>
+      <div style="background:var(--bg3);border-radius:4px;height:6px;overflow:hidden;">
+        <div style="background:${pct>80?'var(--green)':pct>50?'var(--amber)':'var(--red)'};width:${pct}%;height:100%;border-radius:4px;transition:width .5s;"></div>
+      </div>
+    </div>
+    <div class="section-title">Estado por útil</div>`;
+  UTILS.forEach(u => {
+    const uHuecos = Object.values(db.huecos).filter(h=>h.util===u.util);
+    const uOk = uHuecos.filter(h=>h.estado==='libre').length;
+    const allOk = uOk === uHuecos.length;
+    html += `
+      <div class="card" style="padding:10px 14px;margin-bottom:6px;border-color:${allOk?'var(--border)':'var(--amber-border)'};">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-weight:500;">${u.util}</span>
+          <div style="display:flex;gap:5px;align-items:center;">
+            ${uHuecos.map(h=>`<div class="status-dot ${h.estado}" title="${h.id}"></div>`).join('')}
+            <span style="font-size:11px;color:var(--text3);margin-left:4px;">${uOk}/${uHuecos.length}</span>
+          </div>
+        </div>
+      </div>`;
+  });
+  return html;
+}
+
+function renderHistorialView() {
+  if (!db.historial || db.historial.length === 0) {
+    return `<div class="empty-state"><div class="empty-state-icon">○</div>Sin actividad registrada todavía</div>`;
+  }
+  const colorMap = {consumo:'var(--blue)',pedido:'var(--amber)',reposicion:'var(--green)'};
+  return `
+    <div class="section-title">Actividad reciente</div>
+    ${db.historial.map(h=>`
+      <div class="hist-item">
+        <div class="hist-dot" style="background:${colorMap[h.tipo]||'var(--text3)'}"></div>
+        <div class="hist-text">${h.msg}</div>
+        <div class="hist-time">${timeAgo(h.ts)}</div>
+      </div>`).join('')}`;
+}
+
+/* ═══════════════════════════════════════════════
+   INIT + POLLING
+═══════════════════════════════════════════════ */
+async function init() {
+  await loadFromStorage();
+  render();
+  // Polling cada 10 segundos para detectar cambios de otros dispositivos
+  setInterval(async () => {
+    if (!actionInProgress) await syncFromStorage();
+  }, 10000);
+}
+
+init();
+</script>
+</body>
+</html>
